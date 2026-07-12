@@ -4,34 +4,11 @@ import HomeScreen from './components/HomeScreen';
 import CaptureScreen from './components/CaptureScreen';
 import GalleryScreen from './components/GalleryScreen';
 import OcrScreen from './components/OcrScreen';
-
-const DEFAULT_SETTINGS = {
-  intervalSec: 4,
-  sound: true,
-  voice: true,
-  lang: 'fra',
-  threshold: 0.5,
-};
-
-function loadSettings() {
-  try {
-    const raw = localStorage.getItem('scan.settings');
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-  } catch (e) {
-    /* ignore */
-  }
-  return DEFAULT_SETTINGS;
-}
-
-let idCounter = 0;
-export function nextId() {
-  idCounter += 1;
-  return `p${Date.now()}_${idCounter}`;
-}
+import * as session from './lib/session';
 
 export default function App() {
   const [screen, setScreen] = useState('home');
-  const [settings, setSettings] = useState(loadSettings);
+  const [settings, setSettings] = useState(() => session.loadSettings(window.localStorage));
   const [pages, setPages] = useState([]);
 
   useEffect(() => {
@@ -43,36 +20,19 @@ export default function App() {
   }, [settings]);
 
   const addPage = useCallback((page) => {
-    setPages((prev) => [
-      ...prev,
-      {
-        id: nextId(),
-        ...page,
-        ocr: { status: 'pending', progress: 0, statusText: '', text: '', confidence: null, error: null },
-      },
-    ]);
+    setPages((prev) => session.addPage(prev, page));
   }, []);
 
   const updatePage = useCallback((id, patch) => {
-    setPages((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...patch, ocr: patch.ocr ? { ...p.ocr, ...patch.ocr } : p.ocr } : p))
-    );
+    setPages((prev) => session.updatePage(prev, id, patch));
   }, []);
 
   const removePage = useCallback((id) => {
-    setPages((prev) => prev.filter((p) => p.id !== id));
+    setPages((prev) => session.removePage(prev, id));
   }, []);
 
   const movePage = useCallback((id, dir) => {
-    setPages((prev) => {
-      const i = prev.findIndex((p) => p.id === id);
-      if (i < 0) return prev;
-      const j = i + dir;
-      if (j < 0 || j >= prev.length) return prev;
-      const copy = [...prev];
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-      return copy;
-    });
+    setPages((prev) => session.movePage(prev, id, dir));
   }, []);
 
   const clearAll = useCallback(() => setPages([]), []);

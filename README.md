@@ -65,6 +65,36 @@ npm start      # http://localhost:3000
 npm run build  # build de production dans build/
 ```
 
+## ✅ Tests (batterie de vérification)
+
+Une suite de tests prouve que tout fonctionne et sert de garde-fou à chaque
+modification (elle tourne automatiquement en CI via `.github/workflows/ci.yml`).
+
+```bash
+npm run test:unit   # tests unitaires (Jest) : logique de session, statuts OCR, PDF
+npm run test:e2e    # tests end-to-end (Playwright, vrai navigateur) — nécessite un build
+npm run test:all    # unitaires + build + end-to-end
+```
+
+**Tests unitaires** (`src/lib/*.test.js`) : gestion de la session de photos
+(ajout / suppression / réordonnancement / mise à jour de l'OCR), bornes de la
+fréquence, chargement des réglages, traduction des étapes OCR, génération des
+PDF (texte et images).
+
+**Tests end-to-end** (`e2e/*.spec.js`), avec une caméra factice :
+
+- `app-flow` : réglage de la fréquence, **aperçu vidéo temps réel**, capture de
+  photos, **galerie** (boutons précédent/suivant, **swipe**, aperçu N&B),
+  déroulement complet de l'**OCR** jusqu'à la fin, **export PDF** (téléchargement),
+  et absence d'erreur console.
+- `image-processing` : le post-traitement produit bien une image **binarisée**
+  (noir & blanc, sans couleur résiduelle).
+- `ocr-accuracy` : l'**OCR reconnaît réellement** un texte français connu
+  (≥ 70 % des mots, confiance élevée) — via la vraie chaîne de l'app, hors-ligne.
+
+> Les tests e2e exercent les vraies fonctions du bundle grâce à une petite API
+> exposée uniquement quand l'URL contient `?e2e` (aucun effet en production).
+
 ## 🌐 Déploiement (GitHub Pages)
 
 Le workflow `.github/workflows/deploy.yml` construit et déploie automatiquement

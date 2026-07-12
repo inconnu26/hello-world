@@ -4,6 +4,9 @@
 // seule fois puis mis en cache par le navigateur.
 
 import { createWorker } from 'tesseract.js';
+import { labelForStatus } from './ocrStatus';
+
+export { labelForStatus };
 
 // Tous les fichiers Tesseract (worker, moteur WASM, langues) sont embarqués
 // dans l'application : aucun accès CDN, l'OCR fonctionne 100% hors-ligne.
@@ -23,24 +26,6 @@ let workerLang = null;
 let relay = null;
 export function setLogRelay(fn) {
   relay = fn;
-}
-
-// Traduit les étapes internes de Tesseract en libellés lisibles.
-const STATUS_LABELS = {
-  'loading tesseract core': 'Chargement du moteur OCR',
-  'loaded tesseract core': 'Moteur OCR chargé',
-  'initializing tesseract': 'Initialisation du moteur',
-  'initialized tesseract': 'Moteur initialisé',
-  'loading language traineddata': 'Chargement des données de langue',
-  'loaded language traineddata': 'Langue chargée',
-  'initializing api': "Préparation de l'analyse",
-  'initialized api': 'Analyse prête',
-  'recognizing text': 'Reconnaissance du texte',
-};
-
-export function labelForStatus(status) {
-  if (!status) return '';
-  return STATUS_LABELS[status] || status;
 }
 
 // Récupère (ou crée) un worker Tesseract pour la langue demandée.

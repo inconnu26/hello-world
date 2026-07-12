@@ -18,6 +18,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:unit": "react-scripts test --watchAll=false",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test:unit && npm run build && npm run test:e2e",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -37,5 +40,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
   }
 }
