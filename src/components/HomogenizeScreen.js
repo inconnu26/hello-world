@@ -8,7 +8,7 @@ import {
   updateHomogenization,
   updateHomogenizationPage,
 } from '../lib/sessionModel';
-import { buildBookPdf, savePdf } from '../lib/pdf';
+import { buildBookPdf, savePdf, saveText } from '../lib/pdf';
 
 export default function HomogenizeScreen({ session, settings, saveSession, homId, goSession }) {
   const [work, setWork] = useState(session);
@@ -78,6 +78,12 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
     savePdf(doc, `${session.name}.pdf`);
   };
 
+  // TXT : texte intégral continu (sans découpage ni numéros de page).
+  const exportTxt = (pages) => {
+    const text = pages.map((p) => (p.text || '').trim()).filter(Boolean).join('\n\n');
+    saveText(text, `${session.name}.txt`);
+  };
+
   // Export direct du texte OCR brut (sans IA)
   const exportRawPdf = () => {
     const src = work.runs.find((r) => r.id === sourceRunId);
@@ -141,7 +147,11 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
               {running && <button className="secondary" onClick={() => { cancelRef.current = true; }}>■ Arrêter</button>}
               <button className="primary" onClick={() => exportPdf(activeHom.pages.map((p) => ({ text: p.text })))}
                 disabled={!activeHom.pages.some((p) => p.status === 'done')}>
-                📄 Exporter le PDF
+                📄 PDF
+              </button>
+              <button className="secondary" onClick={() => exportTxt(activeHom.pages)}
+                disabled={!activeHom.pages.some((p) => p.status === 'done')}>
+                ⬇︎ TXT
               </button>
             </div>
           </section>

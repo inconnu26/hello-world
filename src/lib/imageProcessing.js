@@ -4,7 +4,9 @@ const MAX_DIM = 1800; // borne la résolution pour la mémoire et la vitesse OCR
 
 // Capture l'image courante d'un élément <video> et la renvoie en JPEG (couleur),
 // redimensionnée pour ne pas dépasser MAX_DIM sur son plus grand côté.
-export function captureFrame(video) {
+// `rotate` (0, 90, -90/270, 180) redresse la photo — utile en mode paysage,
+// quand le téléphone est tenu tourné à 90° : la photo est ré-orientée droite.
+export function captureFrame(video, { rotate = 0 } = {}) {
   const vw = video.videoWidth;
   const vh = video.videoHeight;
   if (!vw || !vh) throw new Error('Flux vidéo non prêt');
@@ -12,17 +14,33 @@ export function captureFrame(video) {
   const scale = Math.min(1, MAX_DIM / Math.max(vw, vh));
   const w = Math.round(vw * scale);
   const h = Math.round(vh * scale);
+  const rot = (((rotate % 360) + 360) % 360);
 
   const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
+  if (rot === 90 || rot === 270) {
+    canvas.width = h;
+    canvas.height = w;
+  } else {
+    canvas.width = w;
+    canvas.height = h;
+  }
   const ctx = canvas.getContext('2d');
+  if (rot === 90) {
+    ctx.translate(h, 0);
+    ctx.rotate(Math.PI / 2);
+  } else if (rot === 180) {
+    ctx.translate(w, h);
+    ctx.rotate(Math.PI);
+  } else if (rot === 270) {
+    ctx.translate(0, w);
+    ctx.rotate(-Math.PI / 2);
+  }
   ctx.drawImage(video, 0, 0, w, h);
 
   return {
     dataUrl: canvas.toDataURL('image/jpeg', 0.92),
-    width: w,
-    height: h,
+    width: canvas.width,
+    height: canvas.height,
   };
 }
 
