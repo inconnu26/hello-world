@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import './SettingsScreen.css';
-import { validateKey } from '../lib/openrouter';
+import { validateKey, testConnection } from '../lib/openrouter';
 import { LOCAL_LANGS } from '../lib/models';
 
 export default function SettingsScreen({ settings, setSettings, goBack }) {
@@ -8,7 +8,17 @@ export default function SettingsScreen({ settings, setSettings, goBack }) {
   const [keyInput, setKeyInput] = useState(settings.openrouterKey || '');
   const [checking, setChecking] = useState(false);
   const [keyResult, setKeyResult] = useState(null);
+  const [testing, setTesting] = useState(false);
+  const [connResult, setConnResult] = useState(null);
   const clampInterval = (v) => Math.max(2, Math.min(10, v));
+
+  const testConn = async () => {
+    setTesting(true);
+    setConnResult(null);
+    const res = await testConnection((keyInput || settings.openrouterKey || '').trim());
+    setConnResult(res);
+    setTesting(false);
+  };
 
   const check = async () => {
     setChecking(true);
@@ -82,6 +92,17 @@ export default function SettingsScreen({ settings, setSettings, goBack }) {
               : `✗ ${keyResult.error}`}
           </div>
         )}
+        <button className="secondary small test-conn" onClick={testConn} disabled={testing || !(keyInput || settings.openrouterKey).trim()}>
+          {testing ? 'Test en cours…' : '🔌 Tester la connexion (vrai appel)'}
+        </button>
+        {connResult && (
+          <div className={connResult.ok ? 'key-status ok' : 'key-status err'}>
+            {connResult.ok
+              ? `✓ Connexion OK — le modèle a répondu : « ${connResult.reply} »`
+              : `✗ ${connResult.error}`}
+          </div>
+        )}
+
         {settings.openrouterKey && (
           <button className="link-btn danger" onClick={clearKey}>Supprimer la clé enregistrée</button>
         )}
