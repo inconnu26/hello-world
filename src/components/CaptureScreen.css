@@ -27,6 +27,65 @@
   z-index: 1;
 }
 
+/* Cadres de rognage */
+.guides { position: absolute; inset: 0; pointer-events: none; }
+.guide {
+  position: absolute;
+  border: 2px dashed rgba(90, 200, 120, 0.95);
+  border-radius: 6px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.28);
+}
+.guide-tag {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #eafff0;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+/* Aperçu N&B après capture */
+.review {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 3;
+  padding: 16px;
+}
+.review-imgs { display: flex; gap: 10px; max-height: 66vh; }
+.review-imgs img {
+  max-height: 66vh;
+  max-width: 44vw;
+  object-fit: contain;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: #fff;
+}
+.review-actions { display: flex; gap: 12px; }
+.review-cancel {
+  background: var(--warn);
+  color: #1a1200;
+  font-weight: 700;
+  border-radius: var(--radius);
+  padding: 13px 18px;
+  font-size: 15px;
+}
+.review-ok {
+  background: var(--ok);
+  color: #04120a;
+  font-weight: 700;
+  border-radius: var(--radius);
+  padding: 13px 22px;
+  font-size: 15px;
+}
+
 .flash {
   position: absolute;
   inset: 0;

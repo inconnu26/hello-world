@@ -44,6 +44,47 @@ export function captureFrame(video, { rotate = 0 } = {}) {
   };
 }
 
+// Rogne une zone de l'aperçu vidéo. `rect` est exprimé en pixels d'affichage
+// (mêmes coordonnées que le conteneur `contW`×`contH`, qui affiche la vidéo en
+// object-fit: cover). On mappe précisément cette zone vers les pixels réels de
+// la vidéo, de sorte que « ce qui est sous les pointillés = ce qui est extrait ».
+export function cropFrame(video, rect, contW, contH) {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  if (!vw || !vh) throw new Error('Flux vidéo non prêt');
+  if (!contW || !contH) throw new Error('Dimensions du conteneur inconnues');
+
+  // object-fit: cover -> échelle = max, vidéo centrée, débordement rogné.
+  const s = Math.max(contW / vw, contH / vh);
+  const dispW = vw * s;
+  const dispH = vh * s;
+  const offX = (dispW - contW) / 2;
+  const offY = (dispH - contH) / 2;
+
+  let srcX = (rect.x + offX) / s;
+  let srcY = (rect.y + offY) / s;
+  let srcW = rect.w / s;
+  let srcH = rect.h / s;
+
+  // Clamp défensif dans les bornes de la vidéo.
+  srcX = Math.max(0, Math.min(vw, srcX));
+  srcY = Math.max(0, Math.min(vh, srcY));
+  srcW = Math.max(1, Math.min(vw - srcX, srcW));
+  srcH = Math.max(1, Math.min(vh - srcY, srcH));
+
+  const scale = Math.min(1, MAX_DIM / Math.max(srcW, srcH));
+  const outW = Math.round(srcW * scale);
+  const outH = Math.round(srcH * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+
+  return { dataUrl: canvas.toDataURL('image/jpeg', 0.92), width: outW, height: outH };
+}
+
 // Charge un dataURL en HTMLImageElement (promesse).
 export function loadImage(src) {
   return new Promise((resolve, reject) => {

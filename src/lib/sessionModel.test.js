@@ -1,5 +1,6 @@
 import {
   newSession,
+  renameSession,
   addPages,
   removePage,
   movePage,
@@ -30,6 +31,13 @@ describe('session + pages', () => {
     expect(s.pages).toEqual([]);
     expect(s.runs).toEqual([]);
     expect(s.homogenizations).toEqual([]);
+  });
+  test('renameSession change le nom, ignore un nom vide', () => {
+    let s = newSession({ name: 'Ancien', now: 1 });
+    s = renameSession(s, 'Nouveau');
+    expect(s.name).toBe('Nouveau');
+    s = renameSession(s, '');
+    expect(s.name).toBe('Nouveau');
   });
   test('ajoute des pages avec identifiants uniques', () => {
     const s = seedSession();

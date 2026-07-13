@@ -16,12 +16,15 @@ export function newSession({ name, now } = {}) {
     name: name || 'Nouveau livre',
     createdAt: t,
     updatedAt: t,
-    orientation: 'portrait', // 'portrait' | 'landscape'
-    landscapeDir: 'left', // sens de rotation en paysage : 'left' | 'right'
+    captureMode: 'single', // 'single' (1 page) | 'double' (livre ouvert = 2 pages)
     pages: [], // { id, originalDataUrl, width, height }
     runs: [], // analyses OCR
     homogenizations: [], // { id, sourceRunId, model, createdAt, status, pages:[{text}], error }
   };
+}
+
+export function renameSession(session, name, now) {
+  return { ...session, name: name || session.name, updatedAt: now == null ? Date.now() : now };
 }
 
 export function newPage(page, now) {

@@ -35,7 +35,7 @@ test('OpenRouter (mock) : clé → OCR cloud → homogénéisation → PDF', asy
     return v && v.videoWidth > 0 && !v.paused;
   }, null, { timeout: 10000 });
   await page.locator('.manual-btn').click();
-  await page.waitForTimeout(200);
+  await page.locator('.review-ok').click();
   await page.locator('.gallery-link').click();
 
   // Nouvel OCR → moteur cloud
