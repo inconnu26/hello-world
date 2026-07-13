@@ -95,45 +95,71 @@ export function loadImage(src) {
   });
 }
 
-// Transforme une image en noir & blanc à fort contraste (binarisation),
-// ce qui améliore nettement la reconnaissance de texte.
-// - grayscale pondéré
-// - étirement de contraste + seuillage adaptatif simple (par rapport à la moyenne)
+// Binarise une image en noir & blanc par SEUILLAGE ADAPTATIF LOCAL (Bradley) :
+// chaque pixel est comparé à la moyenne de son voisinage (via une image
+// intégrale, rapide). Seules les lettres, localement plus sombres que le papier
+// autour, deviennent noires ; les zones claires restent blanches, même en cas
+// d'éclairage inégal. Bien plus fidèle qu'un seuil global (qui noircissait à
+// tort des zones blanches).
+// `threshold` (0..1) règle l'intensité du noir : plus haut = plus de noir.
 export async function toHighContrast(dataUrl, { threshold = 0.5, invert = false } = {}) {
   const img = await loadImage(dataUrl);
+  const W = img.naturalWidth;
+  const H = img.naturalHeight;
   const canvas = document.createElement('canvas');
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
+  canvas.width = W;
+  canvas.height = H;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0);
 
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const imageData = ctx.getImageData(0, 0, W, H);
   const data = imageData.data;
+  const N = W * H;
 
-  // 1) niveaux de gris + calcul de la luminance moyenne
-  const gray = new Float32Array(data.length / 4);
-  let sum = 0;
+  // Niveaux de gris
+  const gray = new Float64Array(N);
   for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-    const g = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-    gray[j] = g;
-    sum += g;
+    gray[j] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
   }
-  const mean = sum / gray.length;
 
-  // 2) seuil = mélange entre moyenne de l'image et réglage utilisateur
-  const cut = mean * (0.6 + 0.8 * threshold); // threshold 0..1 -> décale le seuil
+  // Image intégrale (somme cumulée) pour des moyennes de fenêtre en O(1).
+  const IW = W + 1;
+  const integral = new Float64Array(IW * (H + 1));
+  for (let y = 0; y < H; y++) {
+    let rowSum = 0;
+    for (let x = 0; x < W; x++) {
+      rowSum += gray[y * W + x];
+      integral[(y + 1) * IW + (x + 1)] = integral[y * IW + (x + 1)] + rowSum;
+    }
+  }
 
-  for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-    let v = gray[j] >= cut ? 255 : 0;
-    if (invert) v = 255 - v;
-    data[i] = data[i + 1] = data[i + 2] = v;
-    data[i + 3] = 255;
+  // Fenêtre locale ~ 1/16 de la largeur ; marge k = écart requis sous la
+  // moyenne locale pour être considéré comme du texte (noir).
+  const half = Math.max(8, Math.floor(W / 16));
+  const k = Math.max(0.02, Math.min(0.5, 0.32 - threshold * 0.3)); // défaut 0.5 -> 0.17
+
+  for (let y = 0; y < H; y++) {
+    const y1 = Math.max(0, y - half);
+    const y2 = Math.min(H - 1, y + half);
+    for (let x = 0; x < W; x++) {
+      const x1 = Math.max(0, x - half);
+      const x2 = Math.min(W - 1, x + half);
+      const count = (x2 - x1 + 1) * (y2 - y1 + 1);
+      const sum =
+        integral[(y2 + 1) * IW + (x2 + 1)] -
+        integral[y1 * IW + (x2 + 1)] -
+        integral[(y2 + 1) * IW + x1] +
+        integral[y1 * IW + x1];
+      const idx = y * W + x;
+      const isBlack = gray[idx] * count <= sum * (1 - k);
+      let v = isBlack ? 0 : 255;
+      if (invert) v = 255 - v;
+      const p = idx * 4;
+      data[p] = data[p + 1] = data[p + 2] = v;
+      data[p + 3] = 255;
+    }
   }
   ctx.putImageData(imageData, 0, 0);
 
-  return {
-    dataUrl: canvas.toDataURL('image/jpeg', 0.9),
-    width: canvas.width,
-    height: canvas.height,
-  };
+  return { dataUrl: canvas.toDataURL('image/jpeg', 0.9), width: W, height: H };
 }
