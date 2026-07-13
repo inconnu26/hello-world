@@ -128,29 +128,53 @@ export async function transcribeImage({ apiKey, model, dataUrl }) {
   return { text: (text || '').trim() };
 }
 
-const HOMOGENIZE_SYSTEM =
-  "Tu es un correcteur éditorial. On te donne le texte OCR brut d'une page de livre. " +
-  "Corrige les fautes de reconnaissance et de frappe, restaure l'orthographe, les accents " +
-  "et la ponctuation, recompose les paragraphes proprement. Reste STRICTEMENT fidèle au " +
-  "contenu : ne résume pas, ne reformule pas le style, n'ajoute ni ne supprime d'information. " +
-  "Si un mot est illisible, garde-le tel quel. Réponds uniquement par le texte corrigé, sans commentaire ni balise.";
+// Version LOT : on envoie plusieurs pages d'un coup (meilleur contexte : chapitres,
+// mots coupés recollés, cohérence). Chaque page est délimitée par un marqueur
+// <<<PAGE n>>> qui DOIT être conservé tel quel dans la sortie pour re-découper.
+const HOMOGENIZE_SYSTEM_BATCH =
+  "Tu es un correcteur éditorial. On te donne le texte OCR brut de plusieurs pages " +
+  "consécutives d'un livre. Chaque page commence par un marqueur de la forme " +
+  '"<<<PAGE n>>>". \n' +
+  "Ta tâche : corriger les fautes de reconnaissance/frappe, restaurer l'orthographe, " +
+  "les accents, la ponctuation et les paragraphes ; recoller les mots coupés en fin de " +
+  "page ; conserver la structure (titres de chapitres, sous-titres, listes) en te servant " +
+  "du contexte de l'ensemble. Reste STRICTEMENT fidèle : ne résume pas, ne reformule pas " +
+  "le style, n'ajoute ni ne supprime d'information. \n" +
+  "IMPÉRATIF : réponds uniquement par le texte corrigé, en RECONDUISANT chaque marqueur " +
+  '"<<<PAGE n>>>" exactement (mêmes numéros, même ordre, un avant chaque page). Aucun autre commentaire, aucune balise Markdown.';
 
-// Nettoie / met en forme un texte OCR via un LLM. Renvoie { text }.
-export async function homogenizeText({ apiKey, model, rawText }) {
+// Corrige un LOT de pages en un seul appel. `pages`: [{ n, text }].
+// Renvoie { text } (à re-découper via les marqueurs).
+export async function homogenizeChunk({ apiKey, model, pages, timeoutMs = 180000 }) {
+  const input = pages.map((p) => `<<<PAGE ${p.n}>>>\n${p.text || ''}`).join('\n\n');
   const data = await request('/chat/completions', {
     apiKey,
     method: 'POST',
-    timeoutMs: 120000,
+    timeoutMs,
     body: {
       model,
       messages: [
-        { role: 'system', content: HOMOGENIZE_SYSTEM },
-        { role: 'user', content: rawText || '' },
+        { role: 'system', content: HOMOGENIZE_SYSTEM_BATCH },
+        { role: 'user', content: input },
       ],
       reasoning: NO_THINKING,
-      max_tokens: 8000,
+      max_tokens: 32000,
     },
   });
   const text = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '';
-  return { text: (text || '').trim() };
+  return { text: text || '' };
+}
+
+// Re-découpe une réponse LOT en { numéroDePage: texte }.
+export function splitByPageMarkers(text) {
+  const re = /<<<\s*PAGE\s*(\d+)\s*>>>/g;
+  const matches = [...text.matchAll(re)];
+  const out = {};
+  for (let i = 0; i < matches.length; i++) {
+    const n = parseInt(matches[i][1], 10);
+    const start = matches[i].index + matches[i][0].length;
+    const end = i + 1 < matches.length ? matches[i + 1].index : text.length;
+    out[n] = text.slice(start, end).trim();
+  }
+  return out;
 }
