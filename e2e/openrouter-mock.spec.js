@@ -22,6 +22,9 @@ test('OpenRouter (mock) : clé → OCR cloud → homogénéisation → PDF', asy
   await page.locator('.key-row input').fill('sk-or-v1-fausse-cle-de-test');
   await page.getByRole('button', { name: /Vérifier/ }).click();
   await expect(page.locator('.key-status.ok')).toBeVisible();
+  // Test de connexion réel (mocké) : doit afficher une réponse du modèle
+  await page.getByRole('button', { name: /Tester la connexion/ }).click();
+  await expect(page.locator('.key-status.ok').last()).toContainText('Connexion OK');
   await page.getByRole('button', { name: /Retour/ }).click();
 
   // Créer un livre + 1 photo

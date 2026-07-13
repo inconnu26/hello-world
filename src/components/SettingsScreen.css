@@ -25,4 +25,5 @@
 .key-status.ok { background: rgba(53, 195, 122, 0.15); color: var(--ok); }
 .key-status.err { background: rgba(255, 93, 93, 0.15); color: var(--danger); }
 
+.test-conn { width: 100%; margin-top: 10px; }
 .settings .link-btn.danger { color: var(--danger); margin-top: 10px; display: block; }
