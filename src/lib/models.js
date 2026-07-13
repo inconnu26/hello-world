@@ -4,24 +4,25 @@
 
 // Modèles OpenRouter recommandés pour l'OCR de livres imprimés (cf. enquête
 // OmniDocBench / OCRBench 2026). L'utilisateur peut aussi saisir un slug libre.
+// Modèles OCR (vision) triés du moins cher au plus cher. Prix ≈ $/M tokens
+// (entrée / sortie). Tous acceptent les images (vérifié via l'API OpenRouter).
 export const OPENROUTER_OCR_MODELS = [
-  { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', note: 'Le moins cher, très correct' },
-  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', note: 'Meilleur rapport qualité/prix' },
+  { id: 'openai/gpt-5-nano', label: 'GPT-5 Nano', note: 'Le moins cher · ~$0,05/$0,40' },
+  { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', note: 'Très bon marché · ~$0,10/$0,40' },
+  { id: 'qwen/qwen3-vl-32b-instruct', label: 'Qwen3-VL 32B', note: 'Multilingue, économique · ~$0,10/$0,42' },
   { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash', note: 'Qualité supérieure' },
-  { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6', note: 'Excellente mise en forme' },
-  { id: 'openai/gpt-5.5', label: 'GPT-5.5', note: 'Très fiable' },
-  { id: 'qwen/qwen3-vl-32b-instruct', label: 'Qwen3-VL 32B', note: 'OCR multilingue, économique' },
-  { id: 'qwen/qwen3-vl-8b-instruct', label: 'Qwen3-VL 8B', note: 'Le plus léger/économique' },
+  { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6', note: 'Haut de gamme, mise en forme' },
+  { id: 'openai/gpt-5.5', label: 'GPT-5.5', note: 'Haut de gamme, très fiable' },
 ];
 
-// Modèles conseillés pour l'étape d'homogénéisation (texte -> texte propre).
-// Gemini 2.5 Flash Lite est de loin le moins cher et suffit largement pour corriger.
+// Modèles pour l'homogénéisation (texte -> texte propre), triés par prix.
 export const OPENROUTER_TEXT_MODELS = [
-  { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', note: 'Le moins cher — recommandé pour la correction' },
-  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', note: 'Un cran au-dessus' },
-  { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6', note: 'Excellent en correction/mise en forme' },
-  { id: 'openai/gpt-5.5', label: 'GPT-5.5', note: 'Très bon en correction' },
-  { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash', note: 'Qualité supérieure' },
+  { id: 'openai/gpt-5-nano', label: 'GPT-5 Nano', note: 'Le moins cher · ~$0,05/$0,40' },
+  { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', note: 'Très bon marché · ~$0,10/$0,40' },
+  { id: 'qwen/qwen3-vl-32b-instruct', label: 'Qwen3-VL 32B', note: 'Multilingue, économique · ~$0,10/$0,42' },
+  { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6', note: 'Excellent (plus cher)' },
+  { id: 'openai/gpt-5.5', label: 'GPT-5.5', note: 'Très bon (plus cher)' },
+  { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash', note: 'Qualité supérieure (plus cher)' },
 ];
 
 // Langues OCR embarquées pour le moteur local Tesseract.
