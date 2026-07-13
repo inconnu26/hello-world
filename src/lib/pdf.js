@@ -156,7 +156,7 @@ export function buildBookPdf(pages, { title = 'Livre' } = {}) {
 // d'une page PDF avec la TRANSCRIPTION homogénéisée. Permet de comparer d'où
 // l'on part (image) et où l'on arrive (texte).
 // items: [{ dataUrl, width, height, text }]
-export function buildDebugPdf(items, { title = 'Debug' } = {}) {
+export function buildDebugPdf(items, { title = 'Debug', imageLabel = 'Photo source (OCR)' } = {}) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -176,7 +176,7 @@ export function buildDebugPdf(items, { title = 'Debug' } = {}) {
     // Page image
     if (!first) doc.addPage();
     first = false;
-    heading(`Page ${i + 1} · Photo source (OCR)`);
+    heading(`Page ${i + 1} · ${imageLabel}`);
     if (it.dataUrl && it.width && it.height) {
       const maxW = usableW;
       const maxH = pageH - 70 - margin;

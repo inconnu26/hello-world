@@ -9,6 +9,7 @@ import {
   updateHomogenizationPage,
 } from '../lib/sessionModel';
 import { buildBookPdf, buildDebugPdf, savePdf, saveText } from '../lib/pdf';
+import { toHighContrast } from '../lib/imageProcessing';
 
 export default function HomogenizeScreen({ session, settings, saveSession, homId, goSession }) {
   const [work, setWork] = useState(session);
@@ -84,16 +85,40 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
     saveText(text, `${session.name}.txt`);
   };
 
-  // PDF de debug : photo source + transcription, page par page.
-  const exportDebug = (hom) => {
-    const items = hom.pages.map((p, i) => ({
-      dataUrl: work.pages[i] ? work.pages[i].originalDataUrl : null,
-      width: work.pages[i] ? work.pages[i].width : 0,
-      height: work.pages[i] ? work.pages[i].height : 0,
-      text: p.text,
-    }));
-    const doc = buildDebugPdf(items, { title: session.name });
-    savePdf(doc, `${session.name}-debug.pdf`);
+  // PDF de debug : l'image RÉELLEMENT envoyée à l'OCR (N&B si run local,
+  // couleur si run cloud) + la transcription, page par page.
+  const [dbgBusy, setDbgBusy] = useState(false);
+  const exportDebug = async (hom) => {
+    setDbgBusy(true);
+    try {
+      const src = work.runs.find((r) => r.id === hom.sourceRunId);
+      const isLocal = src && src.engine === 'tesseract-local';
+      const items = [];
+      for (let i = 0; i < hom.pages.length; i++) {
+        const pg = work.pages[i];
+        let dataUrl = pg ? pg.originalDataUrl : null;
+        let width = pg ? pg.width : 0;
+        let height = pg ? pg.height : 0;
+        if (isLocal && dataUrl) {
+          try {
+            const proc = await toHighContrast(dataUrl, { threshold: settings.threshold });
+            dataUrl = proc.dataUrl;
+            width = proc.width;
+            height = proc.height;
+          } catch (e) {
+            /* garde la couleur si le traitement échoue */
+          }
+        }
+        items.push({ dataUrl, width, height, text: hom.pages[i].text });
+      }
+      const doc = buildDebugPdf(items, {
+        title: session.name,
+        imageLabel: isLocal ? "Photo N&B envoyée à l'OCR" : 'Photo couleur envoyée au modèle',
+      });
+      savePdf(doc, `${session.name}-debug.pdf`);
+    } finally {
+      setDbgBusy(false);
+    }
   };
 
   // Export direct du texte OCR brut (sans IA)
@@ -166,8 +191,8 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
                 ⬇︎ TXT
               </button>
               <button className="secondary" onClick={() => exportDebug(activeHom)}
-                disabled={!activeHom.pages.some((p) => p.status === 'done')}>
-                🐞 PDF debug (photo + texte)
+                disabled={dbgBusy || !activeHom.pages.some((p) => p.status === 'done')}>
+                {dbgBusy ? 'Génération…' : '🐞 PDF debug (photo + texte)'}
               </button>
             </div>
           </section>
