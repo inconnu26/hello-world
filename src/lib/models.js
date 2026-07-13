@@ -5,19 +5,19 @@
 // Modèles OpenRouter recommandés pour l'OCR de livres imprimés (cf. enquête
 // OmniDocBench / OCRBench 2026). L'utilisateur peut aussi saisir un slug libre.
 export const OPENROUTER_OCR_MODELS = [
-  { id: 'google/gemini-2.0-flash-001', label: 'Gemini 2.0 Flash', note: 'Le moins cher, très correct' },
+  { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', note: 'Le moins cher, très correct' },
   { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', note: 'Meilleur rapport qualité/prix' },
   { id: 'google/gemini-3-flash-preview', label: 'Gemini 3 Flash', note: 'Qualité supérieure' },
   { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6', note: 'Excellente mise en forme' },
   { id: 'openai/gpt-5.5', label: 'GPT-5.5', note: 'Très fiable' },
   { id: 'qwen/qwen3-vl-32b-instruct', label: 'Qwen3-VL 32B', note: 'OCR multilingue, économique' },
-  { id: 'baidu/qianfan-ocr-fast', label: 'Qianfan-OCR Fast', note: 'OCR spécialisé, très économique' },
+  { id: 'qwen/qwen3-vl-8b-instruct', label: 'Qwen3-VL 8B', note: 'Le plus léger/économique' },
 ];
 
 // Modèles conseillés pour l'étape d'homogénéisation (texte -> texte propre).
-// Gemini 2.0 Flash est de loin le moins cher et suffit largement pour corriger.
+// Gemini 2.5 Flash Lite est de loin le moins cher et suffit largement pour corriger.
 export const OPENROUTER_TEXT_MODELS = [
-  { id: 'google/gemini-2.0-flash-001', label: 'Gemini 2.0 Flash', note: 'Le moins cher — recommandé pour la correction' },
+  { id: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', note: 'Le moins cher — recommandé pour la correction' },
   { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', note: 'Un cran au-dessus' },
   { id: 'anthropic/claude-sonnet-4.6', label: 'Claude Sonnet 4.6', note: 'Excellent en correction/mise en forme' },
   { id: 'openai/gpt-5.5', label: 'GPT-5.5', note: 'Très bon en correction' },

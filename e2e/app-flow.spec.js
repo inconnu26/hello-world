@@ -61,5 +61,10 @@ test('sessions → capture → OCR local → téléchargement', async ({ page })
   await page.getByRole('button', { name: /Mon livre test/ }).click();
   await expect(page.locator('.session .run-item')).toHaveCount(1);
 
+  // Suppression du run OCR
+  page.on('dialog', (d) => d.accept());
+  await page.locator('.run-item .mini.danger').click();
+  await expect(page.locator('.session .run-item')).toHaveCount(0);
+
   expect(consoleErrors, 'aucune erreur console').toEqual([]);
 });
