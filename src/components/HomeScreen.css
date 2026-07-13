@@ -1,0 +1,91 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 40px;
+}
+
+.home-header {
+  text-align: center;
+  padding: 20px 8px 4px;
+}
+.home-header .logo { font-size: 52px; }
+.home-header h1 { font-size: 26px; margin-top: 6px; }
+.home-header .subtitle {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 10px auto 0;
+  max-width: 380px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.card h2 { font-size: 16px; margin-bottom: 4px; }
+.card .hint { color: var(--text-dim); font-size: 13px; margin: 4px 0 12px; }
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+}
+.step-btn {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  font-size: 30px;
+  font-weight: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.step-btn:active { background: var(--primary); }
+.step-value { text-align: center; }
+.step-value .num { font-size: 40px; font-weight: 700; display: block; line-height: 1; }
+.step-value .unit { color: var(--text-dim); font-size: 13px; }
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 15px;
+}
+.row.column { flex-direction: column; align-items: stretch; gap: 8px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row select {
+  background: var(--bg-elev);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 15px;
+}
+.row input[type='range'] { width: 100%; accent-color: var(--primary); }
+.toggle input { width: 22px; height: 22px; accent-color: var(--primary); }
+.hint { color: var(--text-dim); font-size: 12px; }
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.home-footer {
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  padding: 8px 12px 0;
+}

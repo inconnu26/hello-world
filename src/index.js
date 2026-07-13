@@ -2,7 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import reportWebVitals from './reportWebVitals';
+import { toHighContrast, captureFrame } from './lib/imageProcessing';
+import { recognizePage } from './lib/ocr';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -11,7 +12,9 @@ root.render(
   </React.StrictMode>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+// API de test exposée uniquement quand l'URL contient ?e2e — permet aux tests
+// end-to-end d'exercer les vraies fonctions de l'app dans un navigateur réel.
+// Aucun effet en production.
+if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('e2e')) {
+  window.__TEST_API__ = { toHighContrast, captureFrame, recognizePage };
+}
