@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './OcrRunScreen.css';
-import { homogenizeText } from '../lib/openrouter';
+import { homogenizeChunk, splitByPageMarkers } from '../lib/openrouter';
 import { OPENROUTER_TEXT_MODELS, describeRun } from '../lib/models';
 import {
   newHomogenization,
@@ -23,6 +23,7 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
   const [sourceRunId, setSourceRunId] = useState(doneRuns[0] ? doneRuns[0].id : '');
   const [model, setModel] = useState(OPENROUTER_TEXT_MODELS[0].id);
   const [customModel, setCustomModel] = useState('');
+  const [chunkSize, setChunkSize] = useState(20); // pages par appel LLM
 
   const setBoth = (n) => { workRef.current = n; setWork(n); };
   const apply = useCallback((fn) => { const n = fn(workRef.current); setBoth(n); saveSession(n); }, [saveSession]);
@@ -31,43 +32,65 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
   const activeHom = work.homogenizations.find((h) => h.id === activeId);
   const noKey = !settings.openrouterKey;
 
-  const process = async (hom) => {
+  const process = async (hom, size) => {
     if (running) return;
     cancelRef.current = false;
     setRunning(true);
     setActiveId(hom.id);
     const src = work.runs.find((r) => r.id === hom.sourceRunId);
-    pushLog(`Homogénéisation via ${hom.model}, source : ${describeRun(src)}.`, 'head');
+    const batch = Math.max(1, Math.min(999, size || hom.chunkSize || 20));
+    pushLog(`Homogénéisation via ${hom.model}, source : ${describeRun(src)} — lots de ${batch} page(s).`, 'head');
     apply((s) => updateHomogenization(s, hom.id, { status: 'running' }));
 
+    // Construit la liste des pages à traiter (non terminées, non vides).
+    const pending = [];
     for (let i = 0; i < hom.pages.length; i++) {
-      if (cancelRef.current) { pushLog('Interrompu.', 'head'); break; }
-      // Ne retraite pas les pages déjà terminées (reprise optimisée).
       const curHom = workRef.current.homogenizations.find((h) => h.id === hom.id);
-      if (curHom && curHom.pages[i] && curHom.pages[i].status === 'done') {
-        pushLog(`Page ${i + 1} : déjà faite, ignorée.`);
-        continue;
-      }
+      if (curHom && curHom.pages[i] && curHom.pages[i].status === 'done') continue;
       const raw = (src.pages[i] && src.pages[i].text) || '';
-      apply((s) => updateHomogenizationPage(s, hom.id, i, { status: 'running', error: null }));
       if (!raw.trim()) {
         apply((s) => updateHomogenizationPage(s, hom.id, i, { status: 'done', text: '' }));
-        pushLog(`Page ${i + 1} : vide, ignorée.`);
         continue;
       }
+      pending.push(i);
+    }
+
+    // Traite par lots.
+    for (let c = 0; c < pending.length; c += batch) {
+      if (cancelRef.current) { pushLog('Interrompu.', 'head'); break; }
+      const chunk = pending.slice(c, c + batch);
+      chunk.forEach((i) => apply((s) => updateHomogenizationPage(s, hom.id, i, { status: 'running', error: null })));
+      const first = chunk[0] + 1;
+      const last = chunk[chunk.length - 1] + 1;
+      pushLog(`Lot pages ${first}–${last} (${chunk.length}) : correction…`);
       try {
-        pushLog(`Page ${i + 1} : correction…`);
-        const { text } = await homogenizeText({ apiKey: settings.openrouterKey, model: hom.model, rawText: raw });
-        apply((s) => updateHomogenizationPage(s, hom.id, i, { status: 'done', text }));
-        pushLog(`Page ${i + 1} : ✓ ${text.length} caractères.`, 'ok');
+        const pagesIn = chunk.map((i) => ({ n: i + 1, text: src.pages[i].text }));
+        const { text } = await homogenizeChunk({ apiKey: settings.openrouterKey, model: hom.model, pages: pagesIn });
+        let map = splitByPageMarkers(text);
+        // Repli : un seul page dans le lot et aucun marqueur -> tout le texte.
+        if (Object.keys(map).length === 0 && chunk.length === 1) map = { [chunk[0] + 1]: text.trim() };
+        let ok = 0;
+        chunk.forEach((i) => {
+          const t = map[i + 1];
+          if (t != null) {
+            apply((s) => updateHomogenizationPage(s, hom.id, i, { status: 'done', text: t }));
+            ok += 1;
+          } else {
+            apply((s) => updateHomogenizationPage(s, hom.id, i, {
+              status: 'error',
+              error: 'Page absente de la réponse (marqueur manquant). Réduis la taille du lot et relance.',
+            }));
+          }
+        });
+        pushLog(`Lot pages ${first}–${last} : ✓ ${ok}/${chunk.length} pages reçues.`, ok === chunk.length ? 'ok' : 'err');
       } catch (e) {
         const msg = e && e.message ? e.message : String(e);
-        apply((s) => updateHomogenizationPage(s, hom.id, i, { status: 'error', error: msg }));
-        pushLog(`Page ${i + 1} : ✗ ${msg}`, 'err');
+        chunk.forEach((i) => apply((s) => updateHomogenizationPage(s, hom.id, i, { status: 'error', error: msg })));
+        pushLog(`Lot pages ${first}–${last} : ✗ ${msg}`, 'err');
       }
     }
     apply((s) => updateHomogenization(s, hom.id, { status: 'done' }));
-    pushLog('Terminé. Tu peux exporter le PDF.', 'head');
+    pushLog('Terminé. Tu peux exporter le PDF/TXT.', 'head');
     setRunning(false);
   };
 
@@ -75,9 +98,10 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
     const src = work.runs.find((r) => r.id === sourceRunId);
     if (!src) return;
     const chosen = customModel.trim() || model;
-    const hom = newHomogenization({ sourceRunId, model: chosen }, src.pages.length);
+    const batch = Math.max(1, Math.min(999, chunkSize || 20));
+    const hom = { ...newHomogenization({ sourceRunId, model: chosen }, src.pages.length), chunkSize: batch };
     apply((s) => addHomogenization(s, hom));
-    process(hom);
+    process(hom, batch);
   };
 
   const exportPdf = (pages) => {
@@ -164,6 +188,17 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
             <input placeholder="ex: anthropic/claude-sonnet-4.6" value={customModel} onChange={(e) => setCustomModel(e.target.value)} />
           </label>
 
+          <h2>Taille des lots</h2>
+          <label className="row"><span>Pages traitées par appel</span>
+            <input type="number" min="1" max="999" value={chunkSize}
+              onChange={(e) => setChunkSize(Math.max(1, Math.min(999, parseInt(e.target.value, 10) || 1)))} />
+          </label>
+          <p className="hint">
+            Plus de pages par appel = meilleur contexte (chapitres, cohérence) et un peu moins cher,
+            mais attention à la limite de sortie du modèle : si des pages reviennent en erreur
+            « marqueur manquant », réduis cette valeur. 20 est un bon départ ; mets 999 pour tout d'un coup.
+          </p>
+
           {noKey && <div className="key-warn">⚠️ L'homogénéisation IA nécessite une clé OpenRouter (réglages). Tu peux quand même générer un PDF du texte OCR brut ci-dessous.</div>}
 
           <button className="primary big" onClick={createAndRun} disabled={noKey || !sourceRunId}>
@@ -185,7 +220,7 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
             <div className="bar"><div className="bar-fill" style={{ width: `${(activeHom.pages.filter((p) => p.status === 'done').length / Math.max(1, activeHom.pages.length)) * 100}%` }} /></div>
             <div className="run-buttons">
               {!running && activeHom.pages.some((p) => p.status !== 'done') && (
-                <button className="primary" onClick={() => process(activeHom)}>↻ Reprendre</button>
+                <button className="primary" onClick={() => process(activeHom, activeHom.chunkSize)}>↻ Reprendre</button>
               )}
               {running && <button className="secondary" onClick={() => { cancelRef.current = true; }}>■ Arrêter</button>}
               <button className="primary" onClick={() => exportPdf(activeHom.pages.map((p) => ({ text: p.text })))}
