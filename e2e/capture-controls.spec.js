@@ -1,43 +1,57 @@
 const { test, expect } = require('@playwright/test');
 
-test('capture : pause/reprise + mode paysage (rotation photo)', async ({ page }) => {
+test('capture : cropping 1/2 cadres, aperçu N&B (OK/Annuler), pause', async ({ page }) => {
   await page.goto('/?e2e=1');
-  await page.waitForFunction(() => window.__TEST_API__ && window.__TEST_API__.captureFrame);
+  await page.waitForFunction(() => window.__TEST_API__ && window.__TEST_API__.cropFrame);
 
-  // Créer un livre et arriver sur la capture
-  await page.locator('.new-book input').fill('Livre orientation');
+  await page.locator('.new-book input').fill('Crop test');
   await page.getByRole('button', { name: /Nouveau/ }).click();
   await page.waitForFunction(() => {
     const v = document.querySelector('video.preview');
     return v && v.videoWidth > 0 && !v.paused;
   }, null, { timeout: 10000 });
 
-  // --- Mode paysage : l'UI pivote et la photo est redressée (dimensions inversées) ---
-  await page.getByRole('button', { name: 'Paysage' }).click();
-  await expect(page.locator('.capture.landscape')).toBeVisible();
-  const uiTransform = await page.locator('.ui-layer').evaluate((el) => getComputedStyle(el).transform);
-  expect(uiTransform).not.toBe('none');
+  // Mode "une page" par défaut : un seul cadre
+  await expect(page.locator('.guide')).toHaveCount(1);
 
-  const dims = await page.evaluate(() => {
+  // cropFrame respecte le ratio du rectangle demandé
+  const ratio = await page.evaluate(() => {
     const v = document.querySelector('video.preview');
-    const a = window.__TEST_API__.captureFrame(v, { rotate: 0 });
-    const b = window.__TEST_API__.captureFrame(v, { rotate: 90 });
-    return { aw: a.width, ah: a.height, bw: b.width, bh: b.height };
+    const r = { x: 40, y: 60, w: 120, h: 170 };
+    const c = window.__TEST_API__.cropFrame(v, r, v.clientWidth, v.clientHeight);
+    return { got: c.width / c.height, want: r.w / r.h, url: c.dataUrl.slice(0, 11) };
   });
-  expect(dims.bw).toBe(dims.ah); // largeur pivotée = hauteur d'origine
-  expect(dims.bh).toBe(dims.aw);
+  expect(ratio.url).toBe('data:image/');
+  expect(Math.abs(ratio.got - ratio.want)).toBeLessThan(0.06);
 
-  // Retour portrait pour tester les contrôles
-  await page.getByRole('button', { name: 'Portrait' }).click();
+  // Annuler : la photo prise est retirée
+  await page.locator('.manual-btn').click();
+  await expect(page.locator('.review')).toBeVisible();
+  await expect(page.locator('.review-imgs img')).toHaveCount(1);
+  await page.locator('.review-cancel').click();
+  await expect(page.locator('.shot-count')).toContainText('0');
 
-  // --- Pause / reprise ---
-  await page.locator('.shoot').click(); // start
+  // Mode "livre ouvert" : deux cadres, une capture => deux pages
+  await page.getByRole('button', { name: /Livre ouvert/ }).click();
+  await expect(page.locator('.guide')).toHaveCount(2);
+  await page.locator('.manual-btn').click();
+  await expect(page.locator('.review-imgs img')).toHaveCount(2);
+  await page.locator('.review-ok').click();
+  await page.locator('.gallery-link').click();
+  await expect(page.locator('.thumb')).toHaveCount(2);
+
+  // Pause / reprise
+  await page.getByRole('button', { name: /Photos/ }).click();
+  await page.waitForFunction(() => {
+    const v = document.querySelector('video.preview');
+    return v && v.videoWidth > 0 && !v.paused;
+  }, null, { timeout: 10000 });
+  await page.locator('.shoot').click();
   await expect(page.locator('.status-pill')).toContainText('Rafale');
-  await page.locator('.pause-btn').click(); // pause
+  await page.locator('.pause-btn').click();
   await expect(page.locator('.status-pill')).toContainText('Pause');
-  await expect(page.locator('.paused-tag')).toBeVisible();
-  await page.locator('.pause-btn').click(); // reprise
+  await page.locator('.pause-btn').click();
   await expect(page.locator('.status-pill')).toContainText('Rafale');
-  await page.locator('.shoot').click(); // stop
+  await page.locator('.shoot').click();
   await expect(page.locator('.status-pill')).toContainText('Prêt');
 });

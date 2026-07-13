@@ -42,6 +42,12 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
 
     for (let i = 0; i < hom.pages.length; i++) {
       if (cancelRef.current) { pushLog('Interrompu.', 'head'); break; }
+      // Ne retraite pas les pages déjà terminées (reprise optimisée).
+      const curHom = workRef.current.homogenizations.find((h) => h.id === hom.id);
+      if (curHom && curHom.pages[i] && curHom.pages[i].status === 'done') {
+        pushLog(`Page ${i + 1} : déjà faite, ignorée.`);
+        continue;
+      }
       const raw = (src.pages[i] && src.pages[i].text) || '';
       apply((s) => updateHomogenizationPage(s, hom.id, i, { status: 'running', error: null }));
       if (!raw.trim()) {

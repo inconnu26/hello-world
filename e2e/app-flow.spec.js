@@ -20,10 +20,12 @@ test('sessions → capture → OCR local → téléchargement', async ({ page })
     return v && v.videoWidth > 0 && !v.paused;
   }, null, { timeout: 10000 });
 
-  // 2 photos manuelles
+  // 2 photos manuelles (chaque capture affiche un aperçu N&B à confirmer)
+  await expect(page.locator('.guide')).toHaveCount(1); // mode "une page" par défaut
   for (let i = 0; i < 2; i++) {
     await page.locator('.manual-btn').click();
-    await page.waitForTimeout(250);
+    await expect(page.locator('.review')).toBeVisible();
+    await page.locator('.review-ok').click();
   }
   await expect(page.locator('.shot-count')).toContainText('2');
 

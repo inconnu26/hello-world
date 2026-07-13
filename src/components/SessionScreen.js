@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import './SessionScreen.css';
-import { removePage, movePage, runProgress, runToText, removeRun, removeHomogenization } from '../lib/sessionModel';
+import { removePage, movePage, runProgress, runToText, removeRun, removeHomogenization, renameSession } from '../lib/sessionModel';
 import { describeRun } from '../lib/models';
 import { saveText } from '../lib/pdf';
 
@@ -49,7 +49,10 @@ export default function SessionScreen({
     <div className="screen session">
       <header className="sess-header">
         <button className="ghost-btn" onClick={goHome}>‹ Livres</button>
-        <h1 title={session.name}>{session.name}</h1>
+        <h1 title="Renommer" onClick={() => {
+          const n = window.prompt('Nom du livre', session.name);
+          if (n && n.trim()) saveSession(renameSession(session, n.trim()));
+        }}>{session.name} <span className="edit-pen">✏️</span></h1>
         <button className="gear" onClick={goSettings}>⚙️</button>
       </header>
 

@@ -38,7 +38,13 @@ export default function OcrRunScreen({ session, settings, saveSession, runId, go
 
     for (let i = 0; i < run.pages.length; i++) {
       if (cancelRef.current) { pushLog('Interrompu.', 'head'); break; }
-      const page = work.pages[i];
+      // Ne retraite pas les pages déjà terminées (reprise optimisée).
+      const curRun = workRef.current.runs.find((r) => r.id === run.id);
+      if (curRun && curRun.pages[i] && curRun.pages[i].status === 'done') {
+        pushLog(`Page ${i + 1} : déjà analysée, ignorée.`);
+        continue;
+      }
+      const page = workRef.current.pages[i];
       apply((s) => updateRunPage(s, run.id, i, { status: 'running', progress: 0, error: null }));
       pushLog(`Page ${i + 1} : ${engineDef.kind === 'cloud' ? 'envoi au modèle…' : 'traitement local…'}`);
       let last = '';

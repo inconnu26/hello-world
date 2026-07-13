@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import { toHighContrast, captureFrame } from './lib/imageProcessing';
+import { toHighContrast, captureFrame, cropFrame } from './lib/imageProcessing';
 import { recognizePage } from './lib/ocr';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -16,5 +16,5 @@ root.render(
 // end-to-end d'exercer les vraies fonctions de l'app dans un navigateur réel.
 // Aucun effet en production.
 if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('e2e')) {
-  window.__TEST_API__ = { toHighContrast, captureFrame, recognizePage };
+  window.__TEST_API__ = { toHighContrast, captureFrame, cropFrame, recognizePage };
 }

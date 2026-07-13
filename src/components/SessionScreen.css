@@ -21,6 +21,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.sess-header h1 .edit-pen { font-size: 12px; opacity: 0.5; }
 
 .block { padding: 16px; border-bottom: 1px solid var(--line); }
 .block-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
