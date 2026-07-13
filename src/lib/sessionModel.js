@@ -136,6 +136,14 @@ export function addHomogenization(session, hom, now) {
   };
 }
 
+export function removeHomogenization(session, homId, now) {
+  return {
+    ...session,
+    homogenizations: session.homogenizations.filter((h) => h.id !== homId),
+    updatedAt: now == null ? Date.now() : now,
+  };
+}
+
 export function updateHomogenization(session, homId, patch, now) {
   return {
     ...session,

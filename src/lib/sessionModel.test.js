@@ -13,6 +13,7 @@ import {
   newHomogenization,
   addHomogenization,
   updateHomogenizationPage,
+  removeHomogenization,
 } from './sessionModel';
 
 const seedSession = () => {
@@ -107,5 +108,17 @@ describe('homogénéisation', () => {
     s = updateHomogenizationPage(s, hom.id, 2, { status: 'done', text: 'ok' });
     expect(s.homogenizations[0].pages[2].text).toBe('ok');
     expect(s.homogenizations[0].pages[0].status).toBe('pending');
+  });
+  test('removeHomogenization retire uniquement la bonne', () => {
+    let s = seedSession();
+    const run = newRun(s, { engine: 'tesseract-local', lang: 'fra' });
+    s = addRun(s, run);
+    const h1 = newHomogenization({ sourceRunId: run.id, model: 'a' }, 3);
+    const h2 = newHomogenization({ sourceRunId: run.id, model: 'b' }, 3);
+    s = addHomogenization(addHomogenization(s, h1), h2);
+    expect(s.homogenizations).toHaveLength(2);
+    s = removeHomogenization(s, h1.id);
+    expect(s.homogenizations).toHaveLength(1);
+    expect(s.homogenizations[0].id).toBe(h2.id);
   });
 });

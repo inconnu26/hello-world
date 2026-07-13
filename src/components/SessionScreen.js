@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import './SessionScreen.css';
-import { removePage, movePage, runProgress, runToText } from '../lib/sessionModel';
+import { removePage, movePage, runProgress, runToText, removeRun, removeHomogenization } from '../lib/sessionModel';
 import { describeRun } from '../lib/models';
 import { saveText } from '../lib/pdf';
 
@@ -94,6 +94,8 @@ export default function SessionScreen({
                 <div className="run-actions">
                   <button className="mini" title="Télécharger le texte"
                     onClick={() => saveText(runToText(session, run), `${session.name}-ocr.txt`)}>⬇︎ .txt</button>
+                  <button className="mini danger" title="Supprimer cette analyse"
+                    onClick={() => { if (window.confirm('Supprimer cette analyse OCR ?')) saveSession(removeRun(session, run.id)); }}>🗑</button>
                 </div>
               </li>
             ))}
@@ -152,6 +154,10 @@ export default function SessionScreen({
                   <div className="run-main" onClick={() => goHomogenize(h.id)}>
                     <div className="run-title">{h.model} {statusChip(h.status)}</div>
                     <div className="run-sub">depuis {src ? describeRun(src) : 'OCR supprimé'}</div>
+                  </div>
+                  <div className="run-actions">
+                    <button className="mini danger" title="Supprimer cette mise en forme"
+                      onClick={() => { if (window.confirm('Supprimer cette mise en forme ?')) saveSession(removeHomogenization(session, h.id)); }}>🗑</button>
                   </div>
                 </li>
               );
