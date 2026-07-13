@@ -106,7 +106,6 @@ export default function CaptureScreen({ session, settings, setSettings, saveSess
       <video ref={videoRef} className="preview" autoPlay playsInline muted onLoadedMetadata={onLoadedMetadata} />
 
       <div className="ui-layer" style={layerStyle}>
-        <div className="frame-guide" />
         {flash && <div className="flash" />}
         {phase !== 'idle' && (
           <div className="countdown">
