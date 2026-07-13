@@ -7,16 +7,22 @@ test('le post-traitement produit une image binarisée (noir & blanc)', async ({ 
   await page.waitForFunction(() => window.__TEST_API__ && window.__TEST_API__.toHighContrast);
 
   const stats = await page.evaluate(async () => {
-    // Image source : dégradé de gris (beaucoup de nuances intermédiaires).
+    // Image source : page réaliste — texte noir sur fond clair légèrement
+    // dégradé (éclairage inégal). Le seuillage adaptatif doit garder le fond
+    // blanc et ne noircir que le texte.
     const src = document.createElement('canvas');
-    src.width = 200;
-    src.height = 200;
+    src.width = 500;
+    src.height = 300;
     const sc = src.getContext('2d');
-    for (let x = 0; x < 200; x++) {
-      const v = Math.round((x / 199) * 255);
+    // fond clair avec un léger dégradé (simule un éclairage inégal)
+    for (let x = 0; x < 500; x++) {
+      const v = Math.round(210 + (x / 499) * 40); // 210..250, jamais blanc pur
       sc.fillStyle = `rgb(${v},${v},${v})`;
-      sc.fillRect(x, 0, 1, 200);
+      sc.fillRect(x, 0, 1, 300);
     }
+    sc.fillStyle = '#111';
+    sc.font = 'bold 34px Georgia, serif';
+    for (let i = 0; i < 6; i++) sc.fillText('Texte de la page ' + (i + 1), 24, 50 + i * 44);
     const srcUrl = src.toDataURL('image/jpeg', 0.95);
 
     const res = await window.__TEST_API__.toHighContrast(srcUrl, { threshold: 0.5 });
@@ -54,10 +60,12 @@ test('le post-traitement produit une image binarisée (noir & blanc)', async ({ 
 
   // Quasiment tous les pixels sont soit noirs soit blancs (binarisation réussie).
   const binarizedRatio = (stats.dark + stats.light) / stats.total;
-  expect(binarizedRatio).toBeGreaterThan(0.9);
-  // Les deux extrêmes sont présents (on n'a pas tout noir ou tout blanc).
-  expect(stats.dark / stats.total).toBeGreaterThan(0.15);
-  expect(stats.light / stats.total).toBeGreaterThan(0.15);
+  expect(binarizedRatio).toBeGreaterThan(0.95);
+  // Le fond clair dégradé reste blanc en très grande majorité (pas noirci à tort).
+  expect(stats.light / stats.total).toBeGreaterThan(0.7);
+  // Le texte est bien présent en noir (petite fraction, mais non nulle).
+  expect(stats.dark / stats.total).toBeGreaterThan(0.01);
+  expect(stats.dark / stats.total).toBeLessThan(0.35);
   // Résultat en niveaux de gris (pas de couleur résiduelle).
   expect(stats.colored / stats.total).toBeLessThan(0.02);
 });
