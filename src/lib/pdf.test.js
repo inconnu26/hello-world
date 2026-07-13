@@ -1,4 +1,4 @@
-import { buildTextPdf, buildImagePdf } from './pdf';
+import { buildTextPdf, buildImagePdf, buildDebugPdf } from './pdf';
 
 // Un petit JPEG 1x1 valide en base64 (data URL).
 const TINY_JPEG =
@@ -38,5 +38,17 @@ describe('buildImagePdf', () => {
     ]);
     expect(header(doc)).toBe('%PDF-');
     expect(doc.getNumberOfPages()).toBe(2);
+  });
+});
+
+describe('buildDebugPdf', () => {
+  test('produit une page photo + une page texte par élément', () => {
+    const doc = buildDebugPdf([
+      { dataUrl: TINY_JPEG, width: 100, height: 150, text: 'Bonjour' },
+      { dataUrl: TINY_JPEG, width: 100, height: 150, text: 'Monde' },
+    ], { title: 'Debug' });
+    expect(header(doc)).toBe('%PDF-');
+    // 2 éléments × (1 page image + 1 page texte) = 4 pages
+    expect(doc.getNumberOfPages()).toBe(4);
   });
 });

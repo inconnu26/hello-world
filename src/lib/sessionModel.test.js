@@ -3,6 +3,7 @@ import {
   addPages,
   removePage,
   movePage,
+  replacePage,
   newRun,
   addRun,
   updateRun,
@@ -48,6 +49,14 @@ describe('session + pages', () => {
     const s = seedSession();
     expect(movePage(s, s.pages[0].id, -1)).toBe(s);
     expect(movePage(s, s.pages[2].id, 1)).toBe(s);
+  });
+  test('replacePage remplace l\'image en gardant id et position', () => {
+    let s = seedSession();
+    const id = s.pages[1].id;
+    s = replacePage(s, id, { originalDataUrl: 'NEW', width: 9, height: 9 });
+    expect(s.pages[1].id).toBe(id); // même id/position
+    expect(s.pages[1].originalDataUrl).toBe('NEW');
+    expect(s.pages.map((p) => p.originalDataUrl)).toEqual(['a', 'NEW', 'c']);
   });
 });
 

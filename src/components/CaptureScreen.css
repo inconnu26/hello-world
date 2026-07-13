@@ -103,6 +103,22 @@
 .orient.sel { background: var(--primary); border-color: var(--primary); }
 .orient.dir { background: rgba(0,0,0,0.55); }
 
+.replace-banner {
+  position: absolute;
+  top: calc(max(10px, env(safe-area-inset-top)) + 46px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 176, 32, 0.92);
+  color: #1a1200;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 18px;
+  max-width: 92%;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
 .cam-error {
   position: absolute;
   inset: 0;

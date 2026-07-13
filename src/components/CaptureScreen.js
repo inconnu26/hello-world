@@ -3,9 +3,9 @@ import './CaptureScreen.css';
 import useCamera from '../hooks/useCamera';
 import { captureFrame } from '../lib/imageProcessing';
 import { tickSound, shutterSound, speakNumber, unlockAudio } from '../lib/audio';
-import { addPages } from '../lib/sessionModel';
+import { addPages, replacePage } from '../lib/sessionModel';
 
-export default function CaptureScreen({ session, settings, setSettings, saveSession, goSession }) {
+export default function CaptureScreen({ session, settings, setSettings, saveSession, replacePageId, goSession }) {
   const { videoRef, start, stop, active, ready, error, onLoadedMetadata } = useCamera();
   const [phase, setPhase] = useState('idle'); // idle | running | paused
   const [count, setCount] = useState(settings.intervalSec);
@@ -46,6 +46,16 @@ export default function CaptureScreen({ session, settings, setSettings, saveSess
     if (!videoRef.current || !ready) return;
     try {
       const { dataUrl, width, height } = captureFrame(videoRef.current, { rotate: imageDegRef.current });
+      if (settingsRef.current.sound) shutterSound();
+      // Mode remplacement : on remplace UNE photo puis on revient au livre.
+      if (replacePageId) {
+        const next = replacePage(sessionRef.current, replacePageId, { originalDataUrl: dataUrl, width, height });
+        sessionRef.current = next;
+        saveSession(next);
+        setFlash(true);
+        setTimeout(() => { setFlash(false); goSession(); }, 250);
+        return;
+      }
       const next = addPages(sessionRef.current, [{ originalDataUrl: dataUrl, width, height }]);
       sessionRef.current = next;
       saveSession(next);
@@ -53,11 +63,10 @@ export default function CaptureScreen({ session, settings, setSettings, saveSess
       setLastShot(dataUrl);
       setFlash(true);
       setTimeout(() => setFlash(false), 180);
-      if (settingsRef.current.sound) shutterSound();
     } catch (e) {
       /* frame non prête */
     }
-  }, [ready, saveSession, videoRef]);
+  }, [ready, saveSession, videoRef, replacePageId, goSession]);
 
   // Décompte : tourne uniquement en phase "running". La pause fige `count`.
   useEffect(() => {
@@ -118,8 +127,14 @@ export default function CaptureScreen({ session, settings, setSettings, saveSess
           <div className="shot-count">📸 {shotCount}</div>
         </div>
 
-        {/* Sélecteur d'orientation (seulement à l'arrêt) */}
-        {idle && (
+        {replacePageId && (
+          <div className="replace-banner">
+            🔄 Remplacement de la page {session.pages.findIndex((p) => p.id === replacePageId) + 1} — prends une nouvelle photo
+          </div>
+        )}
+
+        {/* Sélecteur d'orientation (seulement à l'arrêt, hors remplacement) */}
+        {idle && !replacePageId && (
           <div className="orient-bar">
             <button className={orientation === 'portrait' ? 'orient sel' : 'orient'} onClick={() => patchSession({ orientation: 'portrait' })}>📱 Portrait</button>
             <button className={orientation === 'landscape' ? 'orient sel' : 'orient'} onClick={() => patchSession({ orientation: 'landscape' })}>🖥️ Paysage</button>
@@ -171,7 +186,9 @@ export default function CaptureScreen({ session, settings, setSettings, saveSess
           </div>
 
           <button className="gallery-link" onClick={goSession}>
-            Terminer — voir le livre ({shotCount} photo{shotCount > 1 ? 's' : ''}) →
+            {replacePageId
+              ? 'Annuler le remplacement →'
+              : `Terminer — voir le livre (${shotCount} photo${shotCount > 1 ? 's' : ''}) →`}
           </button>
         </div>
       </div>

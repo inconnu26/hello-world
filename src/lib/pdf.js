@@ -152,6 +152,66 @@ export function buildBookPdf(pages, { title = 'Livre' } = {}) {
   return doc;
 }
 
+// PDF de debug : pour chaque page, une page PDF avec la PHOTO source, suivie
+// d'une page PDF avec la TRANSCRIPTION homogénéisée. Permet de comparer d'où
+// l'on part (image) et où l'on arrive (texte).
+// items: [{ dataUrl, width, height, text }]
+export function buildDebugPdf(items, { title = 'Debug' } = {}) {
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 40;
+  const usableW = pageW - margin * 2;
+  const lineHeight = 15;
+
+  const heading = (label) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(90);
+    doc.text(label, margin, 34);
+  };
+
+  let first = true;
+  items.forEach((it, i) => {
+    // Page image
+    if (!first) doc.addPage();
+    first = false;
+    heading(`Page ${i + 1} · Photo source (OCR)`);
+    if (it.dataUrl && it.width && it.height) {
+      const maxW = usableW;
+      const maxH = pageH - 70 - margin;
+      const ratio = Math.min(maxW / it.width, maxH / it.height);
+      const w = it.width * ratio;
+      const h = it.height * ratio;
+      doc.addImage(it.dataUrl, 'JPEG', (pageW - w) / 2, 60, w, h);
+    }
+
+    // Page texte
+    doc.addPage();
+    heading(`Page ${i + 1} · Transcription homogénéisée`);
+    doc.setFont('times', 'normal');
+    doc.setFontSize(12);
+    doc.setTextColor(25);
+    const text = (it.text || '').trim() || '(vide)';
+    const lines = doc.splitTextToSize(text.replace(/\n{2,}/g, '\n\n'), usableW);
+    let y = 66;
+    lines.forEach((line) => {
+      if (y > pageH - margin) {
+        doc.addPage();
+        heading(`Page ${i + 1} · Transcription (suite)`);
+        doc.setFont('times', 'normal');
+        doc.setFontSize(12);
+        doc.setTextColor(25);
+        y = 66;
+      }
+      doc.text(line, margin, y);
+      y += lineHeight;
+    });
+  });
+
+  return doc;
+}
+
 // Télécharge un texte brut en .txt
 export function saveText(text, filename) {
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });

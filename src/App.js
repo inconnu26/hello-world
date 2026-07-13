@@ -115,6 +115,7 @@ export default function App() {
           settings={settings}
           setSettings={setSettings}
           saveSession={saveSession}
+          replacePageId={nav.replacePageId}
           goSession={() => go('session', { sessionId: currentSession.id })}
         />
       )}
@@ -126,6 +127,7 @@ export default function App() {
           saveSession={saveSession}
           goHome={() => go('sessions')}
           goCapture={() => go('capture', { sessionId: currentSession.id })}
+          goRecapture={(pageId) => go('capture', { sessionId: currentSession.id, replacePageId: pageId })}
           goNewOcr={() => go('ocr', { sessionId: currentSession.id, runId: 'new' })}
           goRun={(runId) => go('ocr', { sessionId: currentSession.id, runId })}
           goHomogenize={(homId) => go('homogenize', { sessionId: currentSession.id, homId: homId || 'new' })}
