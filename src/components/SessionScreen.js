@@ -9,6 +9,7 @@ export default function SessionScreen({
   saveSession,
   goHome,
   goCapture,
+  goRecapture,
   goNewOcr,
   goRun,
   goHomogenize,
@@ -176,6 +177,7 @@ export default function SessionScreen({
             <div className="viewer-bar">
               <span>Page {idx + 1} / {pages.length}</span>
               <div>
+                <button className="mini" onClick={() => goRecapture(pages[idx].id)} title="Reprendre cette photo">🔄 Reprendre</button>
                 <button className="mini" onClick={() => move(pages[idx].id, -1)} disabled={idx === 0}>◀</button>
                 <button className="mini" onClick={() => move(pages[idx].id, 1)} disabled={idx === pages.length - 1}>▶</button>
                 <button className="mini danger" onClick={() => { del(pages[idx].id); if (idx >= pages.length - 1) setViewer(Math.max(0, idx - 1)); }}>🗑</button>

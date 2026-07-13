@@ -34,6 +34,17 @@ export function addPages(session, pages, now) {
   return { ...session, pages: [...session.pages, ...added], updatedAt: now == null ? Date.now() : now };
 }
 
+// Remplace l'image d'une page existante (même id, même position). Les analyses
+// OCR (indexées par position) restent valides ; leur texte devient obsolète et
+// pourra être relancé sur la nouvelle photo.
+export function replacePage(session, pageId, patch, now) {
+  return {
+    ...session,
+    pages: session.pages.map((p) => (p.id === pageId ? { ...p, ...patch } : p)),
+    updatedAt: now == null ? Date.now() : now,
+  };
+}
+
 export function removePage(session, pageId, now) {
   return {
     ...session,

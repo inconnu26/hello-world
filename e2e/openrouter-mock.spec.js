@@ -74,4 +74,11 @@ test('OpenRouter (mock) : clé → OCR cloud → homogénéisation → PDF', asy
     page.getByRole('button', { name: /TXT/ }).click(),
   ]);
   expect(dlTxt.suggestedFilename()).toMatch(/\.txt$/);
+
+  // Export PDF de debug (photo + texte)
+  const [dlDbg] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /PDF debug/ }).click(),
+  ]);
+  expect(dlDbg.suggestedFilename()).toMatch(/debug\.pdf$/);
 });

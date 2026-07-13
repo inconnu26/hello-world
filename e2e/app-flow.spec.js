@@ -36,7 +36,16 @@ test('sessions → capture → OCR local → téléchargement', async ({ page })
   await expect(page.locator('.viewer-overlay')).toBeVisible();
   await page.locator('.viewer-inner .nav.next').click();
   await expect(page.locator('.viewer-bar')).toContainText('Page 2 / 2');
-  await page.locator('.viewer-bar .mini', { hasText: '✕' }).click();
+
+  // Reprendre (remplacer) la photo courante : retour capture -> 1 photo -> retour livre
+  await page.locator('.viewer-bar .mini', { hasText: 'Reprendre' }).click();
+  await page.waitForFunction(() => {
+    const v = document.querySelector('video.preview');
+    return v && v.videoWidth > 0 && !v.paused;
+  }, null, { timeout: 10000 });
+  await expect(page.locator('.replace-banner')).toBeVisible();
+  await page.locator('.manual-btn').click();
+  await expect(page.locator('.thumb')).toHaveCount(2); // remplacée, pas ajoutée
 
   // Nouvel OCR (moteur local par défaut)
   await page.getByRole('button', { name: /Nouvel OCR/ }).click();

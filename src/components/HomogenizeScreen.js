@@ -8,7 +8,7 @@ import {
   updateHomogenization,
   updateHomogenizationPage,
 } from '../lib/sessionModel';
-import { buildBookPdf, savePdf, saveText } from '../lib/pdf';
+import { buildBookPdf, buildDebugPdf, savePdf, saveText } from '../lib/pdf';
 
 export default function HomogenizeScreen({ session, settings, saveSession, homId, goSession }) {
   const [work, setWork] = useState(session);
@@ -84,6 +84,18 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
     saveText(text, `${session.name}.txt`);
   };
 
+  // PDF de debug : photo source + transcription, page par page.
+  const exportDebug = (hom) => {
+    const items = hom.pages.map((p, i) => ({
+      dataUrl: work.pages[i] ? work.pages[i].originalDataUrl : null,
+      width: work.pages[i] ? work.pages[i].width : 0,
+      height: work.pages[i] ? work.pages[i].height : 0,
+      text: p.text,
+    }));
+    const doc = buildDebugPdf(items, { title: session.name });
+    savePdf(doc, `${session.name}-debug.pdf`);
+  };
+
   // Export direct du texte OCR brut (sans IA)
   const exportRawPdf = () => {
     const src = work.runs.find((r) => r.id === sourceRunId);
@@ -152,6 +164,10 @@ export default function HomogenizeScreen({ session, settings, saveSession, homId
               <button className="secondary" onClick={() => exportTxt(activeHom.pages)}
                 disabled={!activeHom.pages.some((p) => p.status === 'done')}>
                 ⬇︎ TXT
+              </button>
+              <button className="secondary" onClick={() => exportDebug(activeHom)}
+                disabled={!activeHom.pages.some((p) => p.status === 'done')}>
+                🐞 PDF debug (photo + texte)
               </button>
             </div>
           </section>
