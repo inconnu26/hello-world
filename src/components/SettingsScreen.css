@@ -1,0 +1,28 @@
+.settings { padding: 16px; padding-bottom: 40px; }
+
+.set-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.set-header h1 { font-size: 18px; }
+
+.key-row { display: flex; gap: 8px; margin-top: 6px; }
+.key-row input {
+  flex: 1;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: ui-monospace, monospace;
+}
+.key-row .secondary.small { padding: 10px 14px; white-space: nowrap; }
+
+.key-status { margin-top: 10px; font-size: 13px; font-weight: 600; padding: 8px 10px; border-radius: 8px; }
+.key-status.ok { background: rgba(53, 195, 122, 0.15); color: var(--ok); }
+.key-status.err { background: rgba(255, 93, 93, 0.15); color: var(--danger); }
+
+.settings .link-btn.danger { color: var(--danger); margin-top: 10px; display: block; }
