@@ -61,7 +61,14 @@ test('OpenRouter (mock) : clé → OCR cloud → homogénéisation → PDF', asy
   // Export PDF
   const [dl] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: /Exporter le PDF/ }).click(),
+    page.getByRole('button', { name: /📄 PDF/ }).click(),
   ]);
   expect(dl.suggestedFilename()).toMatch(/\.pdf$/);
+
+  // Export TXT également
+  const [dlTxt] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /TXT/ }).click(),
+  ]);
+  expect(dlTxt.suggestedFilename()).toMatch(/\.txt$/);
 });

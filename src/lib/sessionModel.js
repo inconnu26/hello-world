@@ -16,6 +16,8 @@ export function newSession({ name, now } = {}) {
     name: name || 'Nouveau livre',
     createdAt: t,
     updatedAt: t,
+    orientation: 'portrait', // 'portrait' | 'landscape'
+    landscapeDir: 'left', // sens de rotation en paysage : 'left' | 'right'
     pages: [], // { id, originalDataUrl, width, height }
     runs: [], // analyses OCR
     homogenizations: [], // { id, sourceRunId, model, createdAt, status, pages:[{text}], error }
