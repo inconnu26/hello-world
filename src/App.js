@@ -1,83 +1,166 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
-import HomeScreen from './components/HomeScreen';
+import SessionsScreen from './components/SessionsScreen';
+import SettingsScreen from './components/SettingsScreen';
 import CaptureScreen from './components/CaptureScreen';
-import GalleryScreen from './components/GalleryScreen';
-import OcrScreen from './components/OcrScreen';
-import * as session from './lib/session';
+import SessionScreen from './components/SessionScreen';
+import OcrRunScreen from './components/OcrRunScreen';
+import HomogenizeScreen from './components/HomogenizeScreen';
+import { getAllSessions, putSession, deleteSession } from './lib/storage';
+import { newSession } from './lib/sessionModel';
+
+const DEFAULT_SETTINGS = {
+  intervalSec: 4,
+  sound: true,
+  voice: true,
+  threshold: 0.5,
+  lang: 'fra',
+  openrouterKey: '',
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem('scan.settings.v2');
+    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+  } catch (e) {
+    /* ignore */
+  }
+  return { ...DEFAULT_SETTINGS };
+}
 
 export default function App() {
-  const [screen, setScreen] = useState('home');
-  const [settings, setSettings] = useState(() => session.loadSettings(window.localStorage));
-  const [pages, setPages] = useState([]);
+  const [ready, setReady] = useState(false);
+  const [sessions, setSessions] = useState([]);
+  const [settings, setSettings] = useState(loadSettings);
+  const [nav, setNav] = useState({ screen: 'sessions' });
+
+  // Chargement initial depuis IndexedDB.
+  useEffect(() => {
+    getAllSessions()
+      .then((list) => setSessions(list.sort((a, b) => b.updatedAt - a.updatedAt)))
+      .catch(() => setSessions([]))
+      .finally(() => setReady(true));
+  }, []);
 
   useEffect(() => {
     try {
-      localStorage.setItem('scan.settings', JSON.stringify(settings));
+      localStorage.setItem('scan.settings.v2', JSON.stringify(settings));
     } catch (e) {
       /* ignore */
     }
   }, [settings]);
 
-  const addPage = useCallback((page) => {
-    setPages((prev) => session.addPage(prev, page));
+  // Enregistre (ou insère) une session et la persiste.
+  const saveSession = useCallback((session) => {
+    setSessions((prev) => {
+      const exists = prev.some((s) => s.id === session.id);
+      const next = exists ? prev.map((s) => (s.id === session.id ? session : s)) : [session, ...prev];
+      return next;
+    });
+    putSession(session).catch(() => {});
   }, []);
 
-  const updatePage = useCallback((id, patch) => {
-    setPages((prev) => session.updatePage(prev, id, patch));
+  const removeSession = useCallback((id) => {
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    deleteSession(id).catch(() => {});
   }, []);
 
-  const removePage = useCallback((id) => {
-    setPages((prev) => session.removePage(prev, id));
-  }, []);
+  const createSession = useCallback(
+    (name) => {
+      const s = newSession({ name });
+      saveSession(s);
+      return s;
+    },
+    [saveSession]
+  );
 
-  const movePage = useCallback((id, dir) => {
-    setPages((prev) => session.movePage(prev, id, dir));
-  }, []);
+  const go = useCallback((screen, params = {}) => setNav({ screen, ...params }), []);
 
-  const clearAll = useCallback(() => setPages([]), []);
+  const currentSession = useMemo(
+    () => sessions.find((s) => s.id === nav.sessionId) || null,
+    [sessions, nav.sessionId]
+  );
+
+  if (!ready) {
+    return (
+      <div className="app">
+        <div className="splash">📖 Chargement…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
-      {screen === 'home' && (
-        <HomeScreen
-          settings={settings}
-          setSettings={setSettings}
-          pageCount={pages.length}
-          goCapture={() => setScreen('capture')}
-          goGallery={() => setScreen('gallery')}
+      {nav.screen === 'sessions' && (
+        <SessionsScreen
+          sessions={sessions}
+          createSession={(name) => {
+            const s = createSession(name);
+            go('capture', { sessionId: s.id });
+          }}
+          openSession={(id) => go('session', { sessionId: id })}
+          removeSession={removeSession}
+          goSettings={() => go('settings')}
+          hasKey={!!settings.openrouterKey}
         />
       )}
-      {screen === 'capture' && (
+
+      {nav.screen === 'settings' && (
+        <SettingsScreen settings={settings} setSettings={setSettings} goBack={() => go('sessions')} />
+      )}
+
+      {nav.screen === 'capture' && currentSession && (
         <CaptureScreen
+          session={currentSession}
           settings={settings}
           setSettings={setSettings}
-          pages={pages}
-          addPage={addPage}
-          goHome={() => setScreen('home')}
-          goGallery={() => setScreen('gallery')}
+          saveSession={saveSession}
+          goSession={() => go('session', { sessionId: currentSession.id })}
         />
       )}
-      {screen === 'gallery' && (
-        <GalleryScreen
-          pages={pages}
+
+      {nav.screen === 'session' && currentSession && (
+        <SessionScreen
+          session={currentSession}
           settings={settings}
-          updatePage={updatePage}
-          removePage={removePage}
-          movePage={movePage}
-          clearAll={clearAll}
-          goHome={() => setScreen('home')}
-          goCapture={() => setScreen('capture')}
-          goOcr={() => setScreen('ocr')}
+          saveSession={saveSession}
+          goHome={() => go('sessions')}
+          goCapture={() => go('capture', { sessionId: currentSession.id })}
+          goNewOcr={() => go('ocr', { sessionId: currentSession.id, runId: 'new' })}
+          goRun={(runId) => go('ocr', { sessionId: currentSession.id, runId })}
+          goHomogenize={(homId) => go('homogenize', { sessionId: currentSession.id, homId: homId || 'new' })}
+          goSettings={() => go('settings')}
         />
       )}
-      {screen === 'ocr' && (
-        <OcrScreen
-          pages={pages}
+
+      {nav.screen === 'ocr' && currentSession && (
+        <OcrRunScreen
+          session={currentSession}
           settings={settings}
-          updatePage={updatePage}
-          goGallery={() => setScreen('gallery')}
+          setSettings={setSettings}
+          saveSession={saveSession}
+          runId={nav.runId}
+          goSession={() => go('session', { sessionId: currentSession.id })}
         />
+      )}
+
+      {nav.screen === 'homogenize' && currentSession && (
+        <HomogenizeScreen
+          session={currentSession}
+          settings={settings}
+          setSettings={setSettings}
+          saveSession={saveSession}
+          homId={nav.homId}
+          goSession={() => go('session', { sessionId: currentSession.id })}
+        />
+      )}
+
+      {/* Sécurité : si la session ciblée n'existe plus */}
+      {['capture', 'session', 'ocr', 'homogenize'].includes(nav.screen) && !currentSession && (
+        <div className="screen">
+          <p>Session introuvable.</p>
+          <button className="primary" onClick={() => go('sessions')}>Retour à l'accueil</button>
+        </div>
       )}
     </div>
   );

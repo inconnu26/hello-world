@@ -11,18 +11,46 @@ sans envoyer aucune image sur internet.
 
 ## ✨ Fonctionnalités
 
+- **Bibliothèque de livres (sessions)** : chaque livre est une session persistée
+  (IndexedDB) ; on rouvre l'historique, on reprend un scan, on relance des OCR.
 - **Aperçu vidéo en temps réel** pendant toute la capture (cadrage garanti).
 - **Rafale automatique** avec intervalle réglable (2 à 10 s) via un bouton +/−.
 - **Compte à rebours sonore** : bips + annonce vocale « 3, 2, 1 » (désactivables).
-- **Session de photos** avec galerie : navigation par **boutons** et par **swipe
-  gauche/droite**, réordonnancement, suppression, aperçu du rendu noir & blanc.
+- **Galerie** : visionneuse plein écran (boutons **précédent/suivant** + **swipe**),
+  réordonnancement et suppression des pages.
 - **Post-traitement** automatique : niveaux de gris + binarisation à contraste
-  réglable pour optimiser l'OCR.
-- **OCR hors-ligne** via Tesseract (WebAssembly) avec **progression détaillée** :
-  pourcentage réel, étape en cours, journal des calculs et messages d'erreur.
-- **Export PDF** : un PDF texte sélectionnable (une page par photo, dans l'ordre)
-  ou un PDF des scans noir & blanc.
-- Le texte reconnu est **corrigeable** page par page avant l'export.
+  réglable pour optimiser l'OCR local.
+- **Choix du moteur OCR** par analyse :
+  - **Tesseract (local, gratuit, hors-ligne)** — WebAssembly, aucune image envoyée.
+  - **Modèles cloud via OpenRouter** (Gemini, Claude, GPT, Qwen-VL…) avec **clé
+    validée**, ou n'importe quel slug OpenRouter personnalisé.
+- **Plusieurs analyses OCR par livre** : on relance un autre moteur *a posteriori*
+  sur les mêmes photos, chaque run est **stocké**, **téléchargeable en .txt**, et
+  **comparable** page-par-page (OCR A vs OCR B).
+- **Progression détaillée** : pourcentage réel, étape en cours, journal des calculs
+  et messages d'erreur.
+- **Homogénéisation par IA** : un LLM (au choix, via OpenRouter) corrige les fautes
+  d'OCR et met en forme le texte à partir de l'analyse OCR sélectionnée, puis génère
+  un **beau PDF page-par-page** (une page PDF = une page du livre). Un **PDF direct
+  du texte OCR brut** (sans IA) est aussi disponible.
+
+## 🧩 Quels OCR choisir (enquête benchmarks 2026)
+
+D'après OmniDocBench / OCRBench, pour du **texte imprimé de livre** :
+
+| Modèle | Où | Remarque |
+|---|---|---|
+| Tesseract | local, gratuit | hors-ligne, très bon sur imprimé net |
+| Gemini 2.5 Flash | OpenRouter | meilleur rapport qualité/prix |
+| Gemini 3 Flash / Claude Sonnet 4.6 | OpenRouter | qualité maximale, très bonne mise en forme |
+| GPT-5.5 | OpenRouter | fiable |
+| Qwen3-VL / Qianfan-OCR | OpenRouter | OCR spécialisé, économique |
+
+Les champions bruts des benchmarks (GLM-OCR, PaddleOCR-VL) sont auto-hébergés et
+donc hors périmètre d'un site statique.
+
+> ⚠️ Avec un moteur cloud, les photos/texte sont envoyés à OpenRouter. Le mode
+> Tesseract reste 100 % local.
 
 ## 🧠 Comment marche l'OCR (et pourquoi c'est local)
 
@@ -83,13 +111,12 @@ PDF (texte et images).
 
 **Tests end-to-end** (`e2e/*.spec.js`), avec une caméra factice :
 
-- `app-flow` : réglage de la fréquence, **aperçu vidéo temps réel**, capture de
-  photos, **galerie** (boutons précédent/suivant, **swipe**, aperçu N&B),
-  déroulement complet de l'**OCR** jusqu'à la fin, **export PDF** (téléchargement),
-  et absence d'erreur console.
-- `image-processing` : le post-traitement produit bien une image **binarisée**
-  (noir & blanc, sans couleur résiduelle).
-- `ocr-accuracy` : l'**OCR reconnaît réellement** un texte français connu
+- `app-flow` : créer un livre, **aperçu vidéo temps réel**, capture, **visionneuse**
+  (précédent/suivant), **OCR local** complet, **téléchargement .txt**, run listé.
+- `openrouter-mock` : flux **cloud** avec l'API OpenRouter mockée — validation de
+  clé, **OCR par modèle cloud**, **homogénéisation IA**, **export PDF**.
+- `image-processing` : le post-traitement produit bien une image **binarisée**.
+- `ocr-accuracy` : l'**OCR local reconnaît réellement** un texte français connu
   (≥ 70 % des mots, confiance élevée) — via la vraie chaîne de l'app, hors-ligne.
 
 > Les tests e2e exercent les vraies fonctions du bundle grâce à une petite API
