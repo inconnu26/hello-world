@@ -34,6 +34,15 @@ test('capture : cropping 1/2 cadres, aperçu N&B (OK/Annuler), pause', async ({ 
   // Mode "livre ouvert" : deux cadres, une capture => deux pages
   await page.getByRole('button', { name: /Livre ouvert/ }).click();
   await expect(page.locator('.guide')).toHaveCount(2);
+
+  // Les cadres tiennent dans la zone d'aperçu (ne dépassent pas sous les contrôles)
+  const area = await page.locator('.preview-area').boundingBox();
+  for (const g of await page.locator('.guide').all()) {
+    const b = await g.boundingBox();
+    expect(b.y).toBeGreaterThanOrEqual(area.y - 1);
+    expect(b.y + b.height).toBeLessThanOrEqual(area.y + area.height + 1);
+    expect(b.x + b.width).toBeLessThanOrEqual(area.x + area.width + 1);
+  }
   await page.locator('.manual-btn').click();
   await expect(page.locator('.review-imgs img')).toHaveCount(2);
   await page.locator('.review-ok').click();
