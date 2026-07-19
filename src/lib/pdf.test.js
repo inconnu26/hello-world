@@ -1,4 +1,4 @@
-import { buildTextPdf, buildImagePdf, buildDebugPdf } from './pdf';
+import { buildTextPdf, buildImagePdf, buildDebugPdf, buildBookPdf } from './pdf';
 
 // Un petit JPEG 1x1 valide en base64 (data URL).
 const TINY_JPEG =
@@ -36,6 +36,26 @@ describe('buildImagePdf', () => {
       { dataUrl: TINY_JPEG, width: 100, height: 150 },
       { dataUrl: TINY_JPEG, width: 100, height: 150 },
     ]);
+    expect(header(doc)).toBe('%PDF-');
+    expect(doc.getNumberOfPages()).toBe(2);
+  });
+});
+
+describe('buildBookPdf', () => {
+  test('page de titre + une page PDF par page courte', () => {
+    const doc = buildBookPdf([{ text: 'Chapitre premier.' }, { text: 'Suite du texte.' }], { title: 'Mon livre' });
+    expect(header(doc)).toBe('%PDF-');
+    // 1 page de titre + 2 pages de contenu (chacune tient sur une page)
+    expect(doc.getNumberOfPages()).toBe(3);
+  });
+  test('une page très dense déborde sur plusieurs pages PDF', () => {
+    const long = 'mot '.repeat(5000);
+    const doc = buildBookPdf([{ text: long }], { title: 'Dense' });
+    expect(header(doc)).toBe('%PDF-');
+    expect(doc.getNumberOfPages()).toBeGreaterThan(2); // titre + plusieurs pages
+  });
+  test('gère le texte vide', () => {
+    const doc = buildBookPdf([{ text: '' }], { title: 'Vide' });
     expect(header(doc)).toBe('%PDF-');
     expect(doc.getNumberOfPages()).toBe(2);
   });
