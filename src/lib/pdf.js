@@ -72,78 +72,106 @@ export function savePdf(doc, filename) {
   doc.save(filename);
 }
 
-// PDF « livre » soigné, une page PDF par page du livre, avec page de titre,
-// en-tête léger et numéro de page en pied. pages: [{ text }].
+// PDF « livre » soigné : une page PDF par page du livre, page de titre,
+// en-tête (titre) et pied (numéro), texte JUSTIFIÉ, et surtout une TAILLE DE
+// POLICE ADAPTÉE au contenu pour bien remplir la page (page courte = gros texte,
+// page dense = plus petit mais lisible). Pages courtes centrées verticalement.
+// pages: [{ text }].
+const LH_RATIO = 1.42; // interligne
+const FS_MIN = 9;
+const FS_MAX = 22;
+
+function paragraphsOf(text) {
+  const t = (text || '').trim();
+  if (!t) return ['(page vide)'];
+  const paras = t.split(/\n{2,}/).map((s) => s.replace(/\n/g, ' ').trim()).filter(Boolean);
+  return paras.length ? paras : ['(page vide)'];
+}
+
+// Hauteur totale du bloc de texte pour une taille de police donnée.
+function blockHeight(doc, paragraphs, usableW, fs) {
+  const lineH = fs * LH_RATIO;
+  const paraGap = fs * 0.7;
+  let h = 0;
+  doc.setFontSize(fs);
+  paragraphs.forEach((p) => { h += doc.splitTextToSize(p, usableW).length * lineH; });
+  return h + paraGap * (paragraphs.length - 1);
+}
+
+// Plus grande police (FS_MIN..FS_MAX) pour laquelle le texte tient dans usableH.
+function fitFontSize(doc, paragraphs, usableW, usableH) {
+  doc.setFont('times', 'normal');
+  for (let fs = FS_MAX; fs >= FS_MIN; fs -= 0.5) {
+    if (blockHeight(doc, paragraphs, usableW, fs) <= usableH) return fs;
+  }
+  return FS_MIN;
+}
+
 export function buildBookPdf(pages, { title = 'Livre' } = {}) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const marginX = 64;
-  const marginTop = 72;
+  const marginX = 68;
+  const marginTop = 84;
   const marginBottom = 64;
   const usableW = pageW - marginX * 2;
-  const lineHeight = 16;
-  const paraGap = 8;
+  const usableH = pageH - marginTop - marginBottom;
 
   // Page de titre
   doc.setFont('times', 'bold');
-  doc.setFontSize(26);
+  doc.setFontSize(28);
   doc.setTextColor(20);
-  const titleLines = doc.splitTextToSize(title, usableW);
-  doc.text(titleLines, pageW / 2, pageH / 2 - 20, { align: 'center' });
+  doc.text(doc.splitTextToSize(title, usableW), pageW / 2, pageH / 2 - 16, { align: 'center' });
   doc.setFont('times', 'italic');
   doc.setFontSize(11);
   doc.setTextColor(120);
-  doc.text(`${pages.length} page${pages.length > 1 ? 's' : ''}`, pageW / 2, pageH / 2 + 12, { align: 'center' });
+  doc.text(`${pages.length} page${pages.length > 1 ? 's' : ''}`, pageW / 2, pageH / 2 + 16, { align: 'center' });
+
+  const chrome = (pageNum, fs, suite) => {
+    doc.setFont('times', 'italic');
+    doc.setFontSize(9.5);
+    doc.setTextColor(150);
+    doc.text(title, marginX, 46, { maxWidth: usableW });
+    doc.setFont('times', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(140);
+    doc.text(`— ${pageNum}${suite ? ` · ${suite}` : ''} —`, pageW / 2, pageH - 38, { align: 'center' });
+    // rétablit la police du corps
+    doc.setFont('times', 'normal');
+    doc.setFontSize(fs);
+    doc.setTextColor(25);
+  };
 
   pages.forEach((p, i) => {
     doc.addPage();
+    const paragraphs = paragraphsOf(p.text);
+    const fs = fitFontSize(doc, paragraphs, usableW, usableH);
+    const lineH = fs * LH_RATIO;
+    const paraGap = fs * 0.7;
+    const bh = blockHeight(doc, paragraphs, usableW, fs);
+    const paginated = bh > usableH;
+    // Pages courtes : centrées verticalement ; pages pleines : haut de page.
+    let y = paginated ? marginTop : marginTop + Math.max(0, (usableH - bh) / 2);
+    let suite = 0;
 
-    // En-tête
-    doc.setFont('times', 'italic');
-    doc.setFontSize(9);
-    doc.setTextColor(150);
-    doc.text(title, marginX, 40, { maxWidth: usableW });
-
-    // Corps
-    doc.setFont('times', 'normal');
-    doc.setFontSize(12);
-    doc.setTextColor(25);
-
-    const text = (p.text || '').trim() || '(page vide)';
-    const paragraphs = text.split(/\n{2,}/);
-    let y = marginTop;
-
-    const footer = (pdfPageOfBookPage) => {
-      doc.setFont('times', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(150);
-      doc.text(`Page ${i + 1}${pdfPageOfBookPage > 1 ? ` (suite ${pdfPageOfBookPage})` : ''}`, pageW / 2, pageH - 36, {
-        align: 'center',
-      });
-    };
-
-    let contPage = 1;
-    footer(contPage);
+    chrome(i + 1, fs, suite ? `suite ${suite}` : '');
 
     paragraphs.forEach((para) => {
-      const lines = doc.splitTextToSize(para.replace(/\n/g, ' '), usableW);
-      lines.forEach((line) => {
+      doc.setFont('times', 'normal');
+      doc.setFontSize(fs);
+      doc.setTextColor(25);
+      const lines = doc.splitTextToSize(para, usableW);
+      lines.forEach((line, idx) => {
         if (y > pageH - marginBottom) {
           doc.addPage();
-          contPage += 1;
-          doc.setFont('times', 'italic');
-          doc.setFontSize(9);
-          doc.setTextColor(150);
-          doc.text(title, marginX, 40, { maxWidth: usableW });
-          doc.setFont('times', 'normal');
-          doc.setFontSize(12);
-          doc.setTextColor(25);
+          suite += 1;
           y = marginTop;
-          footer(contPage);
+          chrome(i + 1, fs, `suite ${suite}`);
         }
-        doc.text(line, marginX, y);
-        y += lineHeight;
+        const isLastLineOfPara = idx === lines.length - 1;
+        if (isLastLineOfPara) doc.text(line, marginX, y);
+        else doc.text(line, marginX, y, { align: 'justify', maxWidth: usableW });
+        y += lineH;
       });
       y += paraGap;
     });
